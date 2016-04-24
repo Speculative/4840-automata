@@ -1,6 +1,6 @@
 fpga/*.rpt*
 fpga/*.bak*
-fpga/*.tcl*
+#fpga/*.tcl*
 
 fpga/output_files/*
 fpga/simulation/*
