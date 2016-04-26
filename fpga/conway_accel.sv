@@ -8,13 +8,15 @@ module Conway_Accel(
  //       memory it is coming from
  
  input  [15:0] address_b_1, 
- output [19:0] q_b_1
- 
+ output [19:0] q_b_1,
+ output wait_request
+
 );
 
   // for memories, data_b should be unused (never writing through the data ports)
   // clocks can *probably* be the same? implement buffering in the VGA controller?
   // 
+  assign wait_request = 0;
   
   logic [15:0] address_a_1, address_a_2;
   logic [19:0] data_b, q_a_1, q_a_2;
@@ -22,7 +24,8 @@ module Conway_Accel(
   
   assign data_b = 20'd0;
   assign wren_b = 1'd0; // never write over B port
-  
+  wire [19:0] result;
+
   tmemory m1( 
 					.address_a(address_a_1),
 					.address_b(address_b_1),
@@ -86,7 +89,6 @@ module Conway_Accel(
 
 // instatiate conway module, wire together.
 
-wire [19:0] result;
 
   Conway_Multiple cm (.top_row(top_out), 
 							 .middle_row(middle_out),

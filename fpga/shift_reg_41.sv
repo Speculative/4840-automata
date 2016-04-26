@@ -19,8 +19,9 @@ assign dout = sregisters[40:19];
 			
 			sregisters[40:20] <= sregisters[20:0];
 			
-		end else
-			dout <= dout;
+		//end else
+			//dout <= dout;
+		  end
 	end
 
 endmodule

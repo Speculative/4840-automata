@@ -865,6 +865,15 @@
    version="13.1"
    start="clk_0.clk"
    end="vga_led_0.clock_sink" />
+ <connection
+   kind="avalon"
+   version="13.1"
+   start="vga_led_0.avalon_master"
+   end="conway_accel_0.avalon_slave">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
  <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
  <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />
  <interconnectRequirement for="$system" name="qsys_mm.insertDefaultSlave" value="false" />
