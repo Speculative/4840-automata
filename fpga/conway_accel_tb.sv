@@ -21,8 +21,6 @@ end
 always 
   #5 clk = ~clk;
 
-initial 
-#200 $finish;
 
 endmodule
 

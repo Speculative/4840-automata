@@ -82,9 +82,9 @@ module Conway_Accel(
   logic shift_enable_t, shift_enable_m, shift_enable_b, clear;
 
   // instantiate shift register  
-  shift_buffer top    (.din(memory_buffer), .dout(top_out),    .shift_enable(shift_enable_t), .clear(clear));
-  shift_buffer middle (.din(memory_buffer), .dout(middle_out), .shift_enable(shift_enable_m), .clear(clear));
-  shift_buffer bottom (.din(memory_buffer), .dout(bottom_out), .shift_enable(shift_enable_b), .clear(clear));
+  shift_buffer top    (.din(memory_buffer), .dout(top_out),    .shift_enable(shift_enable_t), .clear(clear), .clk(clk));
+  shift_buffer middle (.din(memory_buffer), .dout(middle_out), .shift_enable(shift_enable_m), .clear(clear), .clk(clk));
+  shift_buffer bottom (.din(memory_buffer), .dout(bottom_out), .shift_enable(shift_enable_b), .clear(clear), .clk(clk));
 
 
 // instatiate conway module, wire together.
