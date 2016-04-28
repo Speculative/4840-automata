@@ -61,16 +61,21 @@ module Conway_Accel(
 					.wren_b(wren_b),
 					.clock_a(clk), .clock_b(clk)
 					);
+
+  logic [19:0] zeros = 20'd0;
+  wire [19:0] dout;
+  logic [1:0] sel;
 					
+  mux20 memmux (.din_0(zeros), .din_1(q_a_1), .din_2(q_a_2), .sel(sel), .dout(dout));
   // TODO: this needs to be somewhere in an alwaysff or else it won't change					
   logic direction = 0; //when 0, m1 is t, when 1, m2 is t
 
-  
+
   // reads from memory will go into here. 
   // necessary so that the shift registers are able to read from
   // both m1 and m2 (can't directly wire them up to different memories
   // so the different memories will go here first.)
-  logic [19:0] memory_buffer; 
+  // logic [19:0] memory_buffer; 
   logic oob;
   
   // wires connecting shift output to conway input
@@ -82,9 +87,9 @@ module Conway_Accel(
   logic shift_enable_t, shift_enable_m, shift_enable_b, clear;
 
   // instantiate shift register  
-  shift_buffer top    (.din(memory_buffer), .dout(top_out),    .shift_enable(shift_enable_t), .clear(clear), .clk(clk));
-  shift_buffer middle (.din(memory_buffer), .dout(middle_out), .shift_enable(shift_enable_m), .clear(clear), .clk(clk));
-  shift_buffer bottom (.din(memory_buffer), .dout(bottom_out), .shift_enable(shift_enable_b), .clear(clear), .clk(clk));
+  shift_buffer top    (.din(dout), .dout(top_out),    .shift_enable(shift_enable_t), .clear(clear), .clk(clk));
+  shift_buffer middle (.din(dout), .dout(middle_out), .shift_enable(shift_enable_m), .clear(clear), .clk(clk));
+  shift_buffer bottom (.din(dout), .dout(bottom_out), .shift_enable(shift_enable_b), .clear(clear), .clk(clk));
 
 
 // instatiate conway module, wire together.
@@ -133,13 +138,19 @@ always_ff @(posedge clk or posedge reset) begin
 	  case (state)
 		 TOP : begin
 				 if (address_a_1 < 16'd64 && oob == 1) 
-					memory_buffer <= 20'd0; // dead cell buffer at top 
+					sel = 2'b00; // dead cell buffer at top 
 				 else begin
-			      memory_buffer <= q_a_1;	 
-				   address_a_1 <= address_a_1 + 16'd64; //address for MID
+			     sel = 2'b01;	 
+				   //address_a_1 <= address_a_1 + 16'd64; //address for MID
 				 end
 				 if (address_a_1 > 16'd65407) // in the second-to-last row
 				   oob <= 1; 
+         // memory address computation
+         if (oob == 1 && address_a_1 > 16'd65471)
+					address_a_1 <= address_a_1; // Doesn't matter, won't be checked. do not overflow the variable.  
+         else 
+          address_a_1 <= address_a_1 + 16'd64; //address for BOT
+         
          wren_a_2 <= 0; // new write address not available. don't mess with previous result when top shifted 
 				 shift_enable_m <= 0;
 				 shift_enable_b <= 0;
@@ -148,11 +159,19 @@ always_ff @(posedge clk or posedge reset) begin
 				 end
 
 		 MID : begin
-				 memory_buffer <= q_a_1; 
+				 sel = 2'b01; 
 				 shift_enable_t <= 0;
 				 shift_enable_m <= 1;
-             address_a_2 <= address_a_1;  // will write to the MID address in t+1 grid
-			    address_a_1 <= address_a_1 + 16'd64; // address for BOT
+         address_a_2 <= address_a_1;  // will write to the MID address in t+1 grid
+  			 
+         // Compute address for TOP  
+         if (oob == 1 && address_a_1 < 16'd128)
+					address_a_1 = address_a_1 - 16'd64 + 16'd1; // address for TOP; go back one row, move forward one word 
+				 else begin 
+				   address_a_1 <= address_a_1 - 16'd128 + 16'd1; // address for TOP; go back two rows, move forward one word 
+				 end
+         
+         // address_a_1 <= address_a_1 + 16'd64; // address for BOT
          if (word_count != 6'd0)
            wren_a_2 <= 1; // if looking at first word, EOR zeros still in accelerator, invalid output. 
          state <= BOT;
@@ -161,18 +180,24 @@ always_ff @(posedge clk or posedge reset) begin
 		 BOT : begin
 				 shift_enable_m <= 0;
 				 shift_enable_b <= 1;
-				 if (oob == 1 && address_a_1 < 16'd128) begin
-					address_a_1 = address_a_1 - 16'd64 + 16'd1; // address for TOP; go back one row, move forward one word 
-					memory_buffer <= q_a_1;
+
+         // compute address for mid
+         if (oob == 1 && address_a_1 < 16'd64)
+            address_a_1 <= address_a_1; // address for mid
+         else
+            address_a_1 <= address_a_1+16'd64; // address for mid
+				 
+         if (oob == 1 && address_a_1 < 16'd128) begin
+					sel = 2'b01;
 				 end
 				 else if (oob == 1 && address_a_1 > 16'd65471) begin
-					address_a_1 <= address_a_1 - 16'd128 + 16'd1; // address for TOP; go back two rows, move forward one word 
-					memory_buffer <= 22'd0; // dead cell outline at bottom
+					sel = 2'b00; // dead cell outline at bottom
 				 end
 				 else begin 
-				   address_a_1 <= address_a_1 - 16'd128 + 16'd1; // address for TOP; go back two rows, move forward one word 
-				   memory_buffer <= q_a_1;
+				   sel = 2'b01;
 				 end
+
+
 				 word_count <= word_count + 6'd1;
 				 if(word_count == 6'd63) // at end of row
 				   state <= EOR;
@@ -187,7 +212,7 @@ always_ff @(posedge clk or posedge reset) begin
 					frame_complete <= 1;
 					direction <= 1;
 				end
-				memory_buffer <= 22'd0; // when to deassert write enable so this isn't the next thing written?
+				sel = 2'b00;  // when to deassert write enable so this isn't the next thing written?
 				shift_enable_b <= 1;
 				shift_enable_m <= 1;
 				shift_enable_t <= 1;
@@ -198,7 +223,7 @@ always_ff @(posedge clk or posedge reset) begin
 	  endcase
 	  
 	end
-	
+	/*
 	else if (direction == 1) begin
 	clear <= 0;
 	  case (state)
@@ -269,33 +294,9 @@ always_ff @(posedge clk or posedge reset) begin
 	  endcase
 	  
 	end
-
+  */
 end
 
 
-  
-  /*
-  logic [10:0] i = 11'd0;
-  logic [10:0] j = 11'd0;
-  */
-
-/*							 
-	always @(direction)
-	if(~direction) begin
-	//read from m1, modify m2
-	  for(i=0; i<1024; i++) begin
-	  // push in first 0
-	  //push in first 20
-	  //push in next 1 bit
-		for(j=0;j<1280;j=j+20) begin
-		// write output from Conway_multiple to m2 in correct position
-		// push in 20 bits (3 rows)
-		end
-		//push in last 0
-	  end
-	end else begin
-	//read from m2, modify m1
-	end
-	*/
   
 endmodule
