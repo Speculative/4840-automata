@@ -3,7 +3,7 @@ module Conway_Cell(
   output reg next_state
 );
   
-  logic [1:0] sum_l, sum_c, sum_r;
+  logic [1:0] sum_t, sum_m, sum_b;
   logic [3:0] sum;
   
   

@@ -5,7 +5,7 @@ parameter word_len = 20;
 module Conway_Multiple( 
   input wire [21:0] top_row, middle_row, bottom_row, // 22 columns in
   input logic clk,
-  output wire [19:0] result// 20 columns out
+  output [19:0] result// 20 columns out
 );
 
 
