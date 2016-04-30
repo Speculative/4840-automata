@@ -57,7 +57,7 @@ module Conway_Accel(
 					.data_b(data_b),
 					.q_a(q_a_2),	
 					.q_b(q_b_2),					
-					.wren_a(wren_a_1),
+					.wren_a(wren_a_2),
 					.wren_b(wren_b),
 					.clock_a(clk), .clock_b(clk)
 					);
@@ -119,6 +119,7 @@ always_ff @(posedge clk or posedge reset) begin
 	  word_count <= 6'd0;
 	  state <= TOP;
 	  oob <= 1;
+	  wren_a_2 <= 0;
 	  end
 	  
 	else if (frame_complete) begin
@@ -131,6 +132,7 @@ always_ff @(posedge clk or posedge reset) begin
 	  word_count <= 6'd0;
 	  state <= TOP;
 	  oob <= 1;
+	  wren_a_2 <= 0;
 	  end
 	  
 	else if (direction == 0) begin
@@ -145,13 +147,17 @@ always_ff @(posedge clk or posedge reset) begin
 				 end
 				 if (address_a_1 > 16'd65407) // in the second-to-last row
 				   oob <= 1; 
-         // memory address computation
-         if (oob == 1 && address_a_1 > 16'd65471)
+				// memory address computation
+			 	 if (oob == 1 && address_a_1 > 16'd65471)
 					address_a_1 <= address_a_1; // Doesn't matter, won't be checked. do not overflow the variable.  
-         else 
-          address_a_1 <= address_a_1 + 16'd64; //address for BOT
-         
-         wren_a_2 <= 0; // new write address not available. don't mess with previous result when top shifted 
+				 else 
+				   address_a_1 <= address_a_1 + 16'd64; //address for BOT
+				
+				 if (word_count != 6'd0)
+               wren_a_2 <= 1; // if looking at first word, EOR zeros still in accelerator, invalid output. 
+				 if (address_a_1 > 1)
+				   address_a_2 <= address_a_1 - 16'd2;  // will write to the MID address in t+1 grid
+				 
 				 shift_enable_m <= 0;
 				 shift_enable_b <= 0;
 				 shift_enable_t <= 1;
@@ -162,8 +168,7 @@ always_ff @(posedge clk or posedge reset) begin
 				 sel = 2'b01; 
 				 shift_enable_t <= 0;
 				 shift_enable_m <= 1;
-         address_a_2 <= address_a_1;  // will write to the MID address in t+1 grid
-  			 
+
          // Compute address for TOP  
          if (oob == 1 && address_a_1 < 16'd128)
 					address_a_1 = address_a_1 - 16'd64 + 16'd1; // address for TOP; go back one row, move forward one word 
@@ -171,16 +176,16 @@ always_ff @(posedge clk or posedge reset) begin
 				   address_a_1 <= address_a_1 - 16'd128 + 16'd1; // address for TOP; go back two rows, move forward one word 
 				 end
          
-         // address_a_1 <= address_a_1 + 16'd64; // address for BOT
-         if (word_count != 6'd0)
-           wren_a_2 <= 1; // if looking at first word, EOR zeros still in accelerator, invalid output. 
          state <= BOT;
 				 end
 
 		 BOT : begin
 				 shift_enable_m <= 0;
 				 shift_enable_b <= 1;
-
+				 if (wren_a_2 == 1)
+			      wren_a_2 <= 0;
+  			 
+			 
          // compute address for mid
 			// if we
          if ((oob == 1 && address_a_1 < 16'd64))
@@ -214,6 +219,7 @@ always_ff @(posedge clk or posedge reset) begin
 					frame_complete <= 1;
 					direction <= ~direction;
 				end
+				address_a_2 <= address_a_2 - 16'd1;
 				address_a_1 <= address_a_1 + 16'd64;
 				sel = 2'b00;  // when to deassert write enable so this isn't the next thing written?
 				shift_enable_b <= 1;
