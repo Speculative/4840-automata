@@ -182,7 +182,8 @@ always_ff @(posedge clk or posedge reset) begin
 				 shift_enable_b <= 1;
 
          // compute address for mid
-         if (oob == 1 && address_a_1 < 16'd64)
+			// if we
+         if ((oob == 1 && address_a_1 < 16'd64))
             address_a_1 <= address_a_1; // address for mid
          else
             address_a_1 <= address_a_1+16'd64; // address for mid
@@ -197,21 +198,23 @@ always_ff @(posedge clk or posedge reset) begin
 				   sel = 2'b01;
 				 end
 
-
 				 word_count <= word_count + 6'd1;
-				 if(word_count == 6'd63) // at end of row
+				 if(word_count == 6'd63) begin// at end of row
 				   state <= EOR;
+					address_a_1 <= address_a_1 - 16'd64; //put it back to top before going into EOR
+				 end
 				 else
 				   state <= TOP;
 				 end
 
 		EOR : begin
-				if (oob == 1 && address_a_1 < 16'd65)
+				if (oob == 1 && address_a_1 < 16'd129)
 				  oob <= 0;
 				else if (oob == 1) begin
 					frame_complete <= 1;
-					direction <= 1;
+					direction <= ~direction;
 				end
+				address_a_1 <= address_a_1 + 16'd64;
 				sel = 2'b00;  // when to deassert write enable so this isn't the next thing written?
 				shift_enable_b <= 1;
 				shift_enable_m <= 1;
