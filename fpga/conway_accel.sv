@@ -147,8 +147,8 @@ always_ff @(posedge clk or posedge reset) begin
 			     sel = 2'b01;	 
 				   //address_a_1 <= address_a_1 + 16'd64; //address for MID
 				 end
-				 if (address_a_1 > 16'd65407) // in the second-to-last row
-				   oob <= 1; 
+				 //if (address_a_1 > 16'd65407) // in the second-to-last row
+				 //oob <= 1;
 				// memory address computation
 			 	 if (oob == 1 && address_a_1 > 16'd65471)
 					address_a_1 <= address_a_1; // Doesn't matter, won't be checked. do not overflow the variable.  
@@ -177,7 +177,8 @@ always_ff @(posedge clk or posedge reset) begin
 				 shift_enable_m <= 1;
 
          // Compute address for TOP  
-         if (oob == 1 && address_a_1 < 16'd128)
+         //if (oob == 1 && address_a_1 < 16'd128)
+			if (oob == 1)
 					address_a_1 = address_a_1 - 16'd64 + 16'd1; // address for TOP; go back one row, move forward one word 
 			else begin 
 				   address_a_1 <= address_a_1 - 16'd128 + 16'd1; // address for TOP; go back two rows, move forward one word 
@@ -191,13 +192,14 @@ always_ff @(posedge clk or posedge reset) begin
 				 shift_enable_b <= 1;
 				 if (wren_a_2 == 1)
 			      wren_a_2 <= 0;
-  			 
-			 
+			
          // compute address for mid
 			// if we
          if ((oob == 1 && address_a_1 < 16'd64))
             address_a_1 <= address_a_1; // address for mid
-         else if (word_count == 16'd63)
+			else if ((oob == 1) && (address_a_1 < 16'd65))
+				address_a_1 <= 0;
+         else if (word_count == 6'd63)
 				address_a_1 <= address_a_1; // address for top to account for extra cycle by EOR
 			else 
             address_a_1 <= address_a_1+16'd64; // address for mid
@@ -215,7 +217,7 @@ always_ff @(posedge clk or posedge reset) begin
 
 			word_count <= word_count + 6'd1;
 			
-			if(word_count == 16'd63) begin// at end of row
+			if(word_count == 6'd63) begin// at end of row
 				   state <= EOR;
 			end
 			else
@@ -223,6 +225,10 @@ always_ff @(posedge clk or posedge reset) begin
 			end
 
 		EOR : begin
+				
+				if (address_a_1 > 16'd65407) // in the second-to-last row
+					oob <= 1;
+				
 				if (oob == 1 && address_a_1 < 16'd129)
 				  oob <= 0;
 				else if (oob == 1) begin
@@ -242,6 +248,7 @@ always_ff @(posedge clk or posedge reset) begin
 	  endcase
 	  
 	end
+
 	/*
 	else if (direction == 1) begin
 	clear <= 0;
