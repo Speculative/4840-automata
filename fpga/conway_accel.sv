@@ -120,6 +120,7 @@ always_ff @(posedge clk or posedge reset) begin
 	  state <= TOP;
 	  oob <= 1;
 	  wren_a_2 <= 0;
+	  frame_complete <= 0;
 	  end
 	  
 	else if (frame_complete) begin
@@ -133,6 +134,7 @@ always_ff @(posedge clk or posedge reset) begin
 	  state <= TOP;
 	  oob <= 1;
 	  wren_a_2 <= 0;
+	  frame_complete <= 0;
 	  end
 	  
 	else if (direction == 0) begin
@@ -153,8 +155,13 @@ always_ff @(posedge clk or posedge reset) begin
 				 else 
 				   address_a_1 <= address_a_1 + 16'd64; //address for BOT
 				
-				 if (word_count != 6'd0)
-               wren_a_2 <= 1; // if looking at first word, EOR zeros still in accelerator, invalid output. 
+				 if (word_count == 6'd0 && oob == 1)
+               wren_a_2 <= 0; // if looking at first word, EOR zeros still in accelerator, invalid output. 
+				 /*
+				 else if (word_count  == the region where the output is just from the dead cells)
+					wren_a_2 <= 0;
+				 */
+				 else wren_a_2 <= 1;
 				 if (address_a_1 > 1)
 				   address_a_2 <= address_a_1 - 16'd2;  // will write to the MID address in t+1 grid
 				 
@@ -172,9 +179,9 @@ always_ff @(posedge clk or posedge reset) begin
          // Compute address for TOP  
          if (oob == 1 && address_a_1 < 16'd128)
 					address_a_1 = address_a_1 - 16'd64 + 16'd1; // address for TOP; go back one row, move forward one word 
-				 else begin 
+			else begin 
 				   address_a_1 <= address_a_1 - 16'd128 + 16'd1; // address for TOP; go back two rows, move forward one word 
-				 end
+			end
          
          state <= BOT;
 				 end
@@ -190,27 +197,30 @@ always_ff @(posedge clk or posedge reset) begin
 			// if we
          if ((oob == 1 && address_a_1 < 16'd64))
             address_a_1 <= address_a_1; // address for mid
-         else
+         else if (word_count == 16'd63)
+				address_a_1 <= address_a_1; // address for top to account for extra cycle by EOR
+			else 
             address_a_1 <= address_a_1+16'd64; // address for mid
 				 
-         if (oob == 1 && address_a_1 < 16'd128) begin
+         
+			if (oob == 1 && address_a_1 < 16'd128) begin
 					sel = 2'b01;
 				 end
-				 else if (oob == 1 && address_a_1 > 16'd65471) begin
+			else if (oob == 1 && address_a_1 > 16'd65471) begin
 					sel = 2'b00; // dead cell outline at bottom
-				 end
-				 else begin 
+			end
+			else begin 
 				   sel = 2'b01;
-				 end
+			end
 
-				 word_count <= word_count + 6'd1;
-				 if(word_count == 6'd63) begin// at end of row
+			word_count <= word_count + 6'd1;
+			
+			if(word_count == 16'd63) begin// at end of row
 				   state <= EOR;
-					address_a_1 <= address_a_1 - 16'd64; //put it back to top before going into EOR
-				 end
-				 else
+			end
+			else
 				   state <= TOP;
-				 end
+			end
 
 		EOR : begin
 				if (oob == 1 && address_a_1 < 16'd129)
@@ -219,7 +229,7 @@ always_ff @(posedge clk or posedge reset) begin
 					frame_complete <= 1;
 					direction <= ~direction;
 				end
-				address_a_2 <= address_a_2 - 16'd1;
+				// address_a_2 <= address_a_2 - 16'd1;
 				address_a_1 <= address_a_1 + 16'd64;
 				sel = 2'b00;  // when to deassert write enable so this isn't the next thing written?
 				shift_enable_b <= 1;
