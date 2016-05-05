@@ -6,9 +6,9 @@ module Conway_Accel(
  // VGA controller will access memory exclusively on B ports, through this module.
  // TODO: VGA should only ask for one address/data, accelerator determines which 
  //       memory it is coming from
- 
- input  [15:0] address_b_1, 
- output [19:0] q_b_1,
+ input ready_sig,
+ input  [15:0] address_b, 
+ output [19:0] q_b,
  output wait_request
 
 );
@@ -21,6 +21,7 @@ module Conway_Accel(
   logic [15:0] address_a_1, address_a_2;
   logic [19:0] data_b, q_a_1, q_a_2;
   logic [0:0] wren_a_1, wren_a_2, wren_b;
+  wire [19:0] q_b_1, q_b_2;
   
   assign data_b = 20'd0;
   assign wren_b = 1'd0; // never write over B port
@@ -28,7 +29,7 @@ module Conway_Accel(
 
   tmemory m1( 
 					.address_a(address_a_1),
-					.address_b(address_b_1),
+					.address_b(address_b),
 					.data_a(result),
 					.data_b(data_b),
 					.q_a(q_a_1),
@@ -52,7 +53,7 @@ module Conway_Accel(
 
   tmemory m2 (  
 					.address_a(address_a_2),
-					.address_b(address_b_2),
+					.address_b(address_b),
 					.data_a(result),
 					.data_b(data_b),
 					.q_a(q_a_2),	
@@ -91,7 +92,17 @@ module Conway_Accel(
   shift_buffer middle (.din(dout), .dout(middle_out), .shift_enable(shift_enable_m), .clear(clear), .clk(clk));
   shift_buffer bottom (.din(dout), .dout(bottom_out), .shift_enable(shift_enable_b), .clear(clear), .clk(clk));
 
+// deal with requests from the VGA controller
 
+assign q_b = (direction) ? q_b_2:q_b_1;
+/*always_comb begin
+if (direction == 0)
+	q_b = q_b_1;
+else if (direction == 1)
+	q_b = q_b_2;
+end
+  */
+  
 // instatiate conway module, wire together.
 
 
@@ -106,6 +117,7 @@ reg [1:0] state;
 logic [0:0] frame_complete;
 reg [5:0] word_count;
 parameter TOP = 2'd0, MID=2'd1, BOT=2'd2, EOR=2'd3;
+
 
 always_ff @(posedge clk or posedge reset) begin
 
@@ -124,7 +136,7 @@ always_ff @(posedge clk or posedge reset) begin
 	  frame_complete <= 0;
 	  end
 	  
-	else if (frame_complete) begin
+	else if (frame_complete && ready_sig) begin
 	  address_a_1 <= 16'd0;
 	  address_a_2 <= 16'd0;
 	  shift_enable_b <= 1'd0;
@@ -138,6 +150,8 @@ always_ff @(posedge clk or posedge reset) begin
 	  wren_a_2 <= 0;
 	  frame_complete <= 0;
 	  end
+	  
+	else if (frame_complete && ~ready_sig) begin end
 	  
 	else if (direction == 0) begin
 	clear <= 0;

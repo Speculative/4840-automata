@@ -15,9 +15,10 @@ module VGA_LED(input logic        clk, clkmem,
 	       input 		  chipselect,
 			 input wait_request,
 	       input logic [2:0]  address,
-			 input logic [19:0] q_b_1, 
+			 input logic [19:0] q_b, 
 			 
-			 output logic [15:0] address_b_1, 
+			 output logic ready_sig,
+			 output logic [15:0] address_b, 
 	       output logic [7:0] VGA_R, VGA_G, VGA_B,
 	       output logic 	  VGA_CLK, VGA_HS, VGA_VS, VGA_BLANK_n,
 	       output logic 	  VGA_SYNC_n);

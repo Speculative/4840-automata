@@ -583,9 +583,9 @@
   <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone V" />
   <parameter name="AUTO_DEVICE" value="5CSXFC6D6F31C8ES" />
  </module>
- <module kind="vga_led" version="1.0" enabled="1" name="vga_led_0">
+ <module kind="vga_led" version="1.2" enabled="1" name="vga_led_0">
   <parameter name="AUTO_CLOCK_CLOCK_RATE" value="108000000" />
-  <parameter name="AUTO_CLOCK_SINK_CLOCK_RATE" value="50000000" />
+  <parameter name="AUTO_CLOCK50_CLOCK_RATE" value="50000000" />
  </module>
  <module kind="altera_pll" version="13.1" enabled="1" name="pll_0">
   <parameter name="debug_print_output" value="false" />
@@ -792,7 +792,7 @@
   <parameter name="gui_pll_cascading_mode">Create an adjpllin signal to connect with an upstream PLL</parameter>
   <parameter name="AUTO_REFCLK_CLOCK_RATE" value="50000000" />
  </module>
- <module kind="conway_accel" version="1.0" enabled="1" name="conway_accel_0">
+ <module kind="conway_accel" version="1.2" enabled="1" name="conway_accel_0">
   <parameter name="TOP" value="1" />
   <parameter name="MID" value="2" />
   <parameter name="BOT" value="3" />
@@ -861,11 +861,6 @@
    start="clk_0.clk_reset"
    end="conway_accel_0.reset" />
  <connection
-   kind="clock"
-   version="13.1"
-   start="clk_0.clk"
-   end="vga_led_0.clock_sink" />
- <connection
    kind="avalon"
    version="13.1"
    start="vga_led_0.avalon_master"
@@ -874,6 +869,12 @@
   <parameter name="baseAddress" value="0x0000" />
   <parameter name="defaultConnection" value="false" />
  </connection>
+ <connection
+   kind="avalon_streaming"
+   version="13.1"
+   start="vga_led_0.avalon_streaming_source"
+   end="conway_accel_0.avalon_streaming_sink" />
+ <connection kind="clock" version="13.1" start="clk_0.clk" end="vga_led_0.clock50" />
  <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
  <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />
  <interconnectRequirement for="$system" name="qsys_mm.insertDefaultSlave" value="false" />

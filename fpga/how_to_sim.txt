@@ -3,4 +3,3 @@ compile:
 
 simulate:
 /opt/altera/quartus-13.1/modelsim_ase/bin/vsim -L altera_mf_ver conway_accel_tb
-

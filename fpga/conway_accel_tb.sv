@@ -2,11 +2,11 @@ module conway_accel_tb (
 ); 
 
 logic clk, reset;
-logic [15:0] address_b_1;
+logic [15:0] address_b;
 logic wait_request;
-logic [19:0] q_b_1;
+logic [19:0] q_b;
 
-assign address_b_1 = 0;
+assign address_b = 0;
 
 Conway_Accel test(.*);
 
