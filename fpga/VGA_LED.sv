@@ -27,7 +27,11 @@ module VGA_LED(input logic        clk, clkmem,
 	VGA_LED_Emulator led_emulator (.clk108(clk), .reset(reset), .VGA_R(VGA_R), 
 											.VGA_G(VGA_G), .VGA_B(VGA_B),
 											.VGA_CLK(VGA_CLK), .VGA_HS(VGA_HS), .VGA_VS(VGA_VS), 
-											.VGA_BLANK_n(VGA_BLANK_n), .VGA_SYNC_n(VGA_SYNC_n));
+											.VGA_BLANK_n(VGA_BLANK_n), .VGA_SYNC_n(VGA_SYNC_n), 
+											.q_b(q_b), .address(address_b), .ready_sig(ready_sig));
+											
+	
+									
 
 	/*
    always_ff @(posedge clk)
