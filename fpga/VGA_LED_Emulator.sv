@@ -143,10 +143,8 @@ module VGA_LED_Emulator(
 			address <= 16'd0;
 			pixel_count <= 6'd0;
 			ready_sig <= 1;
-		end
-		else
-			ready_sig <= 0;
-		if (hcount < 11'd1280) begin
+		end			
+		else if (hcount < 11'd1280) begin
 			case(state)
 				START : begin 
 					buffer[19:0] <= q_b;
@@ -158,6 +156,7 @@ module VGA_LED_Emulator(
 						buffer[19:0] <= q_b;
 						address <= address + 16'd1;
 					end
+					ready_sig <= 0;
 					if (pixel_count == 5'd19)
 						state <= RT;
 				end
@@ -179,19 +178,19 @@ module VGA_LED_Emulator(
 	end
 	
 	always_comb begin
-      {VGA_R, VGA_G, VGA_B} = {8'h00, 8'h00, 8'h00}; // Black
+		{VGA_R, VGA_G, VGA_B} = {8'h00, 8'h00, 8'h00}; // Black
 		case(state)
 				LT: begin
-					index = pixel_count + 5'd20;
-					if (buffer[index])
+					//index = pixel_count + 5'd20;
+					if (buffer[pixel_count + 5'd20])
 						{VGA_R, VGA_G, VGA_B} = {8'hff, 8'hff, 8'hff}; // White			
 				end
 				RT: begin	
-					index = pixel_count;
-					if (buffer[index])
+					//index = pixel_count;
+					if (buffer[pixel_count])
 						{VGA_R, VGA_G, VGA_B} = {8'hff, 8'hff, 8'hff}; // White
 				end
-			endcase			
+		endcase					
    end 
 	
 	
