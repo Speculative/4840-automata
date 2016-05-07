@@ -585,6 +585,7 @@ set_location_assignment PIN_AJ1 -to VGA_R[7]
 set_location_assignment PIN_AG2 -to VGA_SYNC_n
 set_location_assignment PIN_AC12 -to VGA_VS
 set_global_assignment -name EDA_TIME_SCALE "1 ps" -section_id eda_simulation
+set_global_assignment -name VERILOG_FILE output_files/t1memory.v
 set_global_assignment -name SYSTEMVERILOG_FILE mux20.sv
 set_global_assignment -name SYSTEMVERILOG_FILE VGA_LED_Emulator.sv
 set_global_assignment -name SYSTEMVERILOG_FILE VGA_LED.sv
@@ -601,4 +602,5 @@ set_global_assignment -name HEX_FILE simulation/modelsim/rtl_work/conway_multipl
 set_global_assignment -name HEX_FILE init.hex
 set_global_assignment -name MIF_FILE randominit.mif
 set_global_assignment -name MIF_FILE shuttle.mif
+set_global_assignment -name QIP_FILE output_files/t1memory.qip
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

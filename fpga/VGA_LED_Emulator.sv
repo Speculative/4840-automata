@@ -142,7 +142,7 @@ module VGA_LED_Emulator(
 			pixel_count <= pixel_count + 6'd1;
 			ready_sig <= 1;
 		end			
-		else if (hcount < 11'd1280) begin
+		else if (hcount < 11'd1280 && vcount< 11'd1024) begin
 			case(state)
 				START : begin 
 					buffer[19:0] <= q_b;
@@ -176,7 +176,7 @@ module VGA_LED_Emulator(
 	end
 	
 	always_comb begin
-		{VGA_R, VGA_G, VGA_B} = {8'h00, 8'hff, 8'hff}; // Not Black
+		{VGA_R, VGA_G, VGA_B} = {8'h00, 8'h88, 8'h88}; // Not Black
 		case(state)
 				LT: begin
 					if (buffer[pixel_count + 6'd20])

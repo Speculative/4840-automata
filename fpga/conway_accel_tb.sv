@@ -2,6 +2,7 @@ module conway_accel_tb (
 ); 
 
 logic clk, reset;
+logic ready_sig;
 logic [15:0] address_b;
 logic wait_request;
 logic [19:0] q_b;

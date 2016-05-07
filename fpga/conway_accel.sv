@@ -9,7 +9,8 @@ module Conway_Accel(
  input ready_sig,
  input  [15:0] address_b, 
  output [19:0] q_b,
- output wait_request
+ output wait_request,
+ output logic halp
 
 );
 
@@ -66,10 +67,11 @@ module Conway_Accel(
   logic [19:0] zeros = 20'd0;
   wire [19:0] dout;
   logic [1:0] sel;
-					
+  assign halp = q_b_2[0];
+  
   mux20 memmux (.din_0(zeros), .din_1(q_a_1), .din_2(q_a_2), .sel(sel), .dout(dout));
   // TODO: this needs to be somewhere in an alwaysff or else it won't change					
-  logic direction = 0; //when 0, m1 is t, when 1, m2 is t
+  logic direction; //when 0, m1 is t, when 1, m2 is t
 
 
   // reads from memory will go into here. 
@@ -94,7 +96,7 @@ module Conway_Accel(
 
 // deal with requests from the VGA controller
 
-assign q_b = (direction) ? q_b_2:q_b_1;
+assign q_b = (direction) ? q_b_1:q_b_2;
 /*always_comb begin
 if (direction == 0)
 	q_b = q_b_1;
@@ -134,6 +136,7 @@ always_ff @(posedge clk or posedge reset) begin
 	  wren_a_1 <= 0;
 	  wren_a_2 <= 0;
 	  frame_complete <= 0;
+	  direction <= 0;
 	  end
 	  
 	else if (frame_complete && ready_sig) begin
@@ -149,6 +152,10 @@ always_ff @(posedge clk or posedge reset) begin
 	  wren_a_1 <= 0;
 	  wren_a_2 <= 0;
 	  frame_complete <= 0;
+	  if (direction == 0)
+		direction <= 1;
+	  else
+		direction <= 0;
 	  end
 	  
 	else if (frame_complete && ~ready_sig) begin end
@@ -250,7 +257,6 @@ always_ff @(posedge clk or posedge reset) begin
 				  oob <= 0;
 				else if (oob == 1) begin
 					frame_complete <= 1;
-					direction <= ~direction;
 				end
 				// address_a_2 <= address_a_2 - 16'd1;
 				address_a_1 <= address_a_1 + 16'd64;
@@ -261,7 +267,7 @@ always_ff @(posedge clk or posedge reset) begin
 				word_count <= 6'd0; 
 				state <= TOP;
 				end
-			   
+
 	  endcase
 	  
 	end
@@ -363,7 +369,6 @@ always_ff @(posedge clk or posedge reset) begin
 				  oob <= 0;
 				else if (oob == 1) begin
 					frame_complete <= 1;
-					direction <= ~direction;
 				end
 				// address_a_2 <= address_a_2 - 16'd1;
 				address_a_2 <= address_a_2 + 16'd64;
