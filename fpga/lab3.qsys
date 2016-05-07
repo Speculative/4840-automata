@@ -12,6 +12,14 @@
    element $${FILENAME}
    {
    }
+   element conway_accel_0.avalon_slave
+   {
+      datum baseAddress
+      {
+         value = "0";
+         type = "String";
+      }
+   }
    element vga_led_0.avalon_slave_0
    {
       datum baseAddress
@@ -99,17 +107,11 @@
  <parameter name="timeStamp" value="0" />
  <parameter name="useTestBenchNamingPattern" value="false" />
  <instanceScript></instanceScript>
- <interface name="clk" internal="clk_0.clk_in" type="clock" dir="end" />
- <interface name="reset" internal="clk_0.clk_in_reset" type="reset" dir="end" />
  <interface name="memory" internal="hps_0.memory" type="conduit" dir="end" />
  <interface name="hps_io" internal="hps_0.hps_io" type="conduit" dir="end" />
  <interface name="vga" internal="vga_led_0.conduit_end" type="conduit" dir="end" />
- <module kind="clock_source" version="13.1" enabled="1" name="clk_0">
-  <parameter name="clockFrequency" value="50000000" />
-  <parameter name="clockFrequencyKnown" value="true" />
-  <parameter name="inputClockFrequency" value="0" />
-  <parameter name="resetSynchronousEdges" value="NONE" />
- </module>
+ <interface name="reset" internal="clk_0.clk_in_reset" type="reset" dir="end" />
+ <interface name="clk" internal="clk_0.clk_in" type="clock" dir="end" />
  <module kind="altera_hps" version="13.1.1" enabled="1" name="hps_0">
   <parameter name="MEM_VENDOR" value="Micron" />
   <parameter name="MEM_FORMAT" value="DISCRETE" />
@@ -799,6 +801,49 @@
   <parameter name="EOR" value="4" />
   <parameter name="AUTO_CLOCK_CLOCK_RATE" value="50000000" />
  </module>
+ <module kind="clock_source" version="13.1" enabled="1" name="clk_0">
+  <parameter name="clockFrequency" value="50000000" />
+  <parameter name="clockFrequencyKnown" value="true" />
+  <parameter name="inputClockFrequency" value="0" />
+  <parameter name="resetSynchronousEdges" value="NONE" />
+ </module>
+ <connection
+   kind="clock"
+   version="13.1"
+   start="pll_0.outclk0"
+   end="vga_led_0.clock" />
+ <connection
+   kind="avalon"
+   version="13.1"
+   start="master_0.master"
+   end="vga_led_0.avalon_slave_0">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
+ <connection
+   kind="avalon"
+   version="13.1"
+   start="hps_0.h2f_lw_axi_master"
+   end="vga_led_0.avalon_slave_0">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
+ <connection
+   kind="avalon"
+   version="13.1"
+   start="vga_led_0.avalon_master"
+   end="conway_accel_0.avalon_slave">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
+ <connection
+   kind="avalon_streaming"
+   version="13.1"
+   start="vga_led_0.avalon_streaming_source"
+   end="conway_accel_0.avalon_streaming_sink" />
  <connection
    kind="clock"
    version="13.1"
@@ -826,30 +871,7 @@
    start="clk_0.clk_reset"
    end="vga_led_0.reset_sink" />
  <connection kind="clock" version="13.1" start="clk_0.clk" end="pll_0.refclk" />
- <connection
-   kind="clock"
-   version="13.1"
-   start="pll_0.outclk0"
-   end="vga_led_0.clock" />
- <connection
-   kind="avalon"
-   version="13.1"
-   start="master_0.master"
-   end="vga_led_0.avalon_slave_0">
-  <parameter name="arbitrationPriority" value="1" />
-  <parameter name="baseAddress" value="0x0000" />
-  <parameter name="defaultConnection" value="false" />
- </connection>
  <connection kind="reset" version="13.1" start="clk_0.clk_reset" end="pll_0.reset" />
- <connection
-   kind="avalon"
-   version="13.1"
-   start="hps_0.h2f_lw_axi_master"
-   end="vga_led_0.avalon_slave_0">
-  <parameter name="arbitrationPriority" value="1" />
-  <parameter name="baseAddress" value="0x0000" />
-  <parameter name="defaultConnection" value="false" />
- </connection>
  <connection
    kind="clock"
    version="13.1"
@@ -860,20 +882,6 @@
    version="13.1"
    start="clk_0.clk_reset"
    end="conway_accel_0.reset" />
- <connection
-   kind="avalon"
-   version="13.1"
-   start="vga_led_0.avalon_master"
-   end="conway_accel_0.avalon_slave">
-  <parameter name="arbitrationPriority" value="1" />
-  <parameter name="baseAddress" value="0x0000" />
-  <parameter name="defaultConnection" value="false" />
- </connection>
- <connection
-   kind="avalon_streaming"
-   version="13.1"
-   start="vga_led_0.avalon_streaming_source"
-   end="conway_accel_0.avalon_streaming_sink" />
  <connection kind="clock" version="13.1" start="clk_0.clk" end="vga_led_0.clock50" />
  <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
  <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />

@@ -7,9 +7,9 @@
 module VGA_LED_Emulator(
  input logic 	    clk108, reset,
  input logic [19:0] q_b,
+
  output logic ready_sig,
  output logic [15:0]address,
- //input logic[9:0] ballX, ballY,
  output logic [7:0] VGA_R, VGA_G, VGA_B,
  output logic 	    VGA_CLK, VGA_HS, VGA_VS, VGA_BLANK_n, VGA_SYNC_n);
 
@@ -109,25 +109,23 @@ module VGA_LED_Emulator(
     * clk108    __|  |__|  |__|
     *        
     */
-   //assign VGA_CLK = clk108; // 108 MHz clock: pixel latched on rising edge
-	//assign {VGA_R, VGA_G, VGA_B} = {8'h00, 8'hbf, 8'hff};
+   assign VGA_CLK = clk108; // 108 MHz clock: pixel latched on rising edge
 	
 	/*
-	assign inBall = ((hcount[10:1] - ballX)*(hcount[10:1] - ballX) + (vcount[9:0] - ballY)*(vcount[9:0] - ballY)) < 64;
+	assign inBall = ((hcount[10:1] - 500)*(hcount[10:1] - 500) + (vcount[9:0] - 500)*(vcount[9:0] - 500)) < 64;
 	
    always_comb begin
       {VGA_R, VGA_G, VGA_B} = {8'h00, 8'hbf, 8'hff}; // Blue
       if (inBall)
 			{VGA_R, VGA_G, VGA_B} = {8'hff, 8'hff, 8'h00}; // Yellow			
    end  
-   */
+*/
 	
 	
 	logic [39:0] buffer;
 	logic [1:0] state;
-	logic [4:0] pixel_count;
-	parameter START = 2'd0, LT=2'd1, RT=2'd2;
-	logic [5:0] index;
+	logic [5:0] pixel_count;
+	parameter START = 2'd0, LT=2'd1, RT=2'd2;	
 
 	
 	always_ff @(posedge clk108 or posedge reset) begin
@@ -135,13 +133,13 @@ module VGA_LED_Emulator(
 		// reset or end of frame
 		if(reset) begin
 			address <= 16'd0;
-			pixel_count <= 5'd0;
+			pixel_count <= 6'd0;
 			state <= START;
 			buffer <= 40'd0;
 		end
-		else if(address == 16'd65535 && pixel_count == 5'd18) begin
+		else if(address == 16'd65535 && pixel_count == 6'd18) begin
 			address <= 16'd0;
-			pixel_count <= 6'd0;
+			pixel_count <= pixel_count + 6'd1;
 			ready_sig <= 1;
 		end			
 		else if (hcount < 11'd1280) begin
@@ -152,46 +150,43 @@ module VGA_LED_Emulator(
 					state <= RT;
 				end
 				LT : begin // drawing left, writing right 
-					if(pixel_count == 5'd18) begin
+					if(pixel_count == 6'd18) begin
 						buffer[19:0] <= q_b;
 						address <= address + 16'd1;
 					end
 					ready_sig <= 0;
-					if (pixel_count == 5'd19)
+					if (pixel_count == 6'd19)
 						state <= RT;
 				end
 				RT: begin // drawing right, writing left
-					if (pixel_count == 5'd18) begin
+					if (pixel_count == 6'd18) begin
 						buffer[39:20] <= q_b;
 						address <= address + 16'd1;
 					end
-					if (pixel_count == 5'd19)
+					if (pixel_count == 6'd19)
 						state <= LT;
 				end
 			endcase
-			if (pixel_count == 5'd19)
-				pixel_count <= 5'd0;
+			if (pixel_count == 6'd19)
+				pixel_count <= 6'd0;
 			else
-				pixel_count <= pixel_count + 5'd1;	
+				pixel_count <= pixel_count + 6'd1;	
 				
 		end 
 	end
 	
 	always_comb begin
-		{VGA_R, VGA_G, VGA_B} = {8'h00, 8'h00, 8'h00}; // Black
+		{VGA_R, VGA_G, VGA_B} = {8'h00, 8'hff, 8'hff}; // Not Black
 		case(state)
 				LT: begin
-					//index = pixel_count + 5'd20;
-					if (buffer[pixel_count + 5'd20])
+					if (buffer[pixel_count + 6'd20])
 						{VGA_R, VGA_G, VGA_B} = {8'hff, 8'hff, 8'hff}; // White			
 				end
 				RT: begin	
-					//index = pixel_count;
 					if (buffer[pixel_count])
 						{VGA_R, VGA_G, VGA_B} = {8'hff, 8'hff, 8'hff}; // White
 				end
 		endcase					
    end 
-	
 	
 endmodule // VGA_LED_Emulator

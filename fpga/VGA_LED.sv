@@ -33,14 +33,7 @@ module VGA_LED(input logic        clk, clkmem,
 	
 									
 
-	/*
-   always_ff @(posedge clk)
-		if (reset) begin
-			ballX <= 10'd320;
-			ballY <= 10'd240;
-		end else if (chipselect && write) begin
-			ballX <= writedata[9:0];
-			ballY <= writedata[25:16];
-		end
-*/
+		//logic [19:0] q_b_test;
+		//assign q_b_test = 20'b11111111110000000000;
+		
 		endmodule
