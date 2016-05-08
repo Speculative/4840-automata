@@ -4,8 +4,6 @@ module Conway_Accel(
  
  input clk, reset,
  // VGA controller will access memory exclusively on B ports, through this module.
- // TODO: VGA should only ask for one address/data, accelerator determines which 
- //       memory it is coming from
  input ready_sig,
  input  [15:0] address_b, 
  output [19:0] q_b,
@@ -96,7 +94,7 @@ module Conway_Accel(
 
 // deal with requests from the VGA controller
 
-assign q_b = (direction) ? q_b_1:q_b_2;
+assign q_b = (direction) ? q_b_2:q_b_1;
 /*always_comb begin
 if (direction == 0)
 	q_b = q_b_1;
@@ -115,10 +113,10 @@ end
 							 .clk(clk));							 
 				 
 
-reg [1:0] state;
+enum logic [1:0] {TOP, MID, BOT, EOR} state;
 logic [0:0] frame_complete;
 reg [5:0] word_count;
-parameter TOP = 2'd0, MID=2'd1, BOT=2'd2, EOR=2'd3;
+// parameter TOP = 2'd0, MID=2'd1, BOT=2'd2, EOR=2'd3;
 
 
 always_ff @(posedge clk or posedge reset) begin

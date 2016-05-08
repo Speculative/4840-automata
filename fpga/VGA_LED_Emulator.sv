@@ -123,9 +123,8 @@ module VGA_LED_Emulator(
 	
 	
 	logic [39:0] buffer;
-	logic [1:0] state;
+	enum logic [1:0] {START, LT, RT} state;
 	logic [5:0] pixel_count;
-	parameter START = 2'd0, LT=2'd1, RT=2'd2;	
 
 	
 	always_ff @(posedge clk108 or posedge reset) begin
@@ -136,6 +135,7 @@ module VGA_LED_Emulator(
 			pixel_count <= 6'd0;
 			state <= START;
 			buffer <= 40'd0;
+			ready_sig <= 1'd0;
 		end
 		else if(address == 16'd65535 && pixel_count == 6'd18) begin
 			address <= 16'd0;
