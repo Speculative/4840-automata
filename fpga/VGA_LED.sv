@@ -9,12 +9,8 @@
 
 module VGA_LED(input logic        clk, clkmem,
 	       input logic 	  reset,
-	       input logic [31:0]  writedata,
-	       input logic 	  write,
 			 output logic read1, 
-	       input 		  chipselect,
 			 input wait_request,
-	       input logic [2:0]  address,
 			 input logic [19:0] q_b,
 			 input logic halp,
 			 

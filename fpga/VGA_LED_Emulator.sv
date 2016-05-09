@@ -179,11 +179,11 @@ module VGA_LED_Emulator(
 		{VGA_R, VGA_G, VGA_B} = {8'h00, 8'h88, 8'h88}; // Not Black
 		case(state)
 				LT: begin
-					if (buffer[pixel_count + 6'd20])
+					if (buffer[(6'd39-pixel_count)])
 						{VGA_R, VGA_G, VGA_B} = {8'hff, 8'hff, 8'hff}; // White			
 				end
 				RT: begin	
-					if (buffer[pixel_count])
+					if (buffer[(6'd19-pixel_count)])
 						{VGA_R, VGA_G, VGA_B} = {8'hff, 8'hff, 8'hff}; // White
 				end
 		endcase					

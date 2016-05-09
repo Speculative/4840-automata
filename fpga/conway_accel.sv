@@ -8,7 +8,13 @@ module Conway_Accel(
  input  [15:0] address_b, 
  output [19:0] q_b,
  output wait_request,
- output logic halp
+ output logic halp,
+ 
+ // processor hookup
+ input logic [63:0]  writedata,
+ input logic 	  write,
+ input logic [2:0]  address,
+ input 		  chipselect
 
 );
 
@@ -29,7 +35,7 @@ module Conway_Accel(
   tmemory m1( 
 					.address_a(address_a_1),
 					.address_b(address_b),
-					.data_a(result),
+					.data_a(tomem),
 					.data_b(data_b),
 					.q_a(q_a_1),
 					.q_b(q_b_1),
@@ -53,7 +59,7 @@ module Conway_Accel(
   tmemory m2 (  
 					.address_a(address_a_2),
 					.address_b(address_b),
-					.data_a(result),
+					.data_a(tomem),
 					.data_b(data_b),
 					.q_a(q_a_2),	
 					.q_b(q_b_2),					
@@ -63,14 +69,14 @@ module Conway_Accel(
 					);
 
   logic [19:0] zeros = 20'd0;
-  wire [19:0] dout;
+  wire [19:0] shiftdata;
   logic [1:0] sel;
   assign halp = q_b_2[0];
+  wire [19:0] tomem;
   
-  mux20 memmux (.din_0(zeros), .din_1(q_a_1), .din_2(q_a_2), .sel(sel), .dout(dout));
+  mux20 memmux (.din_0(zeros), .din_1(q_a_1), .din_2(q_a_2), .sel(sel), .dout(shiftdata));
   // TODO: this needs to be somewhere in an alwaysff or else it won't change					
   logic direction; //when 0, m1 is t, when 1, m2 is t
-
 
   // reads from memory will go into here. 
   // necessary so that the shift registers are able to read from
@@ -88,20 +94,34 @@ module Conway_Accel(
   logic shift_enable_t, shift_enable_m, shift_enable_b, clear;
 
   // instantiate shift register  
-  shift_buffer top    (.din(dout), .dout(top_out),    .shift_enable(shift_enable_t), .clear(clear), .clk(clk));
-  shift_buffer middle (.din(dout), .dout(middle_out), .shift_enable(shift_enable_m), .clear(clear), .clk(clk));
-  shift_buffer bottom (.din(dout), .dout(bottom_out), .shift_enable(shift_enable_b), .clear(clear), .clk(clk));
+  shift_buffer top    (.din(shiftdata), .dout(top_out),    .shift_enable(shift_enable_t), .clear(clear), .clk(clk));
+  shift_buffer middle (.din(shiftdata), .dout(middle_out), .shift_enable(shift_enable_m), .clear(clear), .clk(clk));
+  shift_buffer bottom (.din(shiftdata), .dout(bottom_out), .shift_enable(shift_enable_b), .clear(clear), .clk(clk));
 
 // deal with requests from the VGA controller
 
-assign q_b = (direction) ? q_b_2:q_b_1;
-/*always_comb begin
-if (direction == 0)
-	q_b = q_b_1;
-else if (direction == 1)
-	q_b = q_b_2;
+ assign q_b = (direction) ? q_b_2:q_b_1;
+
+ logic computation_en;
+ 
+ always_ff @ (posedge clk or posedge reset) begin
+ if (reset)
+	computation_en <= 0;
+ else if (write) begin // receiving something from the processor
+	if (writedata[63] == 1'b0) begin
+		if (writedata[0] == 0) begin
+			computation_en <= 0;
+			tomemsel <= 2'b01;
+		end
+		else if (writedata[0] == 1) begin
+			computation_en <= 1;
+			tomemsel <= 2'b00;
+		end
+	end
+ end
 end
-  */
+  mux20 muxtomem (.din_0(result), .din_1(writedata[19:0]), .din_2(zeroes), .sel(tomemsel), .dout(tomem));
+
   
 // instatiate conway module, wire together.
 
@@ -136,141 +156,146 @@ always_ff @(posedge clk or posedge reset) begin
 	  frame_complete <= 0;
 	  direction <= 0;
 	  end
-	  
-	else if (frame_complete && ready_sig) begin
-	  address_a_1 <= 16'd0;
-	  address_a_2 <= 16'd0;
-	  shift_enable_b <= 1'd0;
-	  shift_enable_m <= 1'd0;
-	  shift_enable_t <= 1'd0;
-	  clear <= 1;
-	  word_count <= 6'd0;
-	  state <= TOP;
-	  oob <= 1;
-	  wren_a_1 <= 0;
-	  wren_a_2 <= 0;
-	  frame_complete <= 0;
-	  if (direction == 0)
-		direction <= 1;
-	  else
-		direction <= 0;
-	  end
-	  
-	else if (frame_complete && ~ready_sig) begin end
-	  
-	else if (direction == 0) begin
-	clear <= 0;
-	  case (state)
-		 TOP : begin
-				 if (address_a_1 < 16'd64 && oob == 1) 
-					sel = 2'b00; // dead cell buffer at top 
-				 else begin
-			     sel = 2'b01;	 
-				   //address_a_1 <= address_a_1 + 16'd64; //address for MID
-				 end
-				 //if (address_a_1 > 16'd65407) // in the second-to-last row
-				 //oob <= 1;
-				// memory address computation
-			 	 if (oob == 1 && address_a_1 > 16'd65471)
-					address_a_1 <= address_a_1; // Doesn't matter, won't be checked. do not overflow the variable.  
-				 else 
-				   address_a_1 <= address_a_1 + 16'd64; //address for BOT
-				
-				 if (word_count == 6'd0 && oob == 1)
-               wren_a_2 <= 0; // if looking at first word, EOR zeros still in accelerator, invalid output. 
-				 /*
-				 else if (word_count  == the region where the output is just from the dead cells)
-					wren_a_2 <= 0;
-				 */
-				 else wren_a_2 <= 1;
-				 if (address_a_1 > 1)
-				   address_a_2 <= address_a_1 - 16'd2;  // will write to the MID address in t+1 grid
-				 
-				 shift_enable_m <= 0;
-				 shift_enable_b <= 0;
-				 shift_enable_t <= 1;
-				 state <= MID;
-				 end
-
-		 MID : begin
-				 sel = 2'b01; 
-				 shift_enable_t <= 0;
-				 shift_enable_m <= 1;
-
-         // Compute address for TOP  
-         //if (oob == 1 && address_a_1 < 16'd128)
-			if (oob == 1)
-					address_a_1 = address_a_1 - 16'd64 + 16'd1; // address for TOP; go back one row, move forward one word 
-			else begin 
-				   address_a_1 <= address_a_1 - 16'd128 + 16'd1; // address for TOP; go back two rows, move forward one word 
-			end
-         
-         state <= BOT;
-			if (wren_a_2 == 1)
-			   wren_a_2 <= 0;	 
-			end
-
-		 BOT : begin
-				 shift_enable_m <= 0;
-				 shift_enable_b <= 1;
-
-			
-         // compute address for mid
-			// if we
-         if ((oob == 1 && address_a_1 < 16'd64))
-            address_a_1 <= address_a_1; // address for mid
-			else if ((oob == 1) && (address_a_1 < 16'd65))
-				address_a_1 <= 0;
-         else if (word_count == 6'd63)
-				address_a_1 <= address_a_1; // address for top to account for extra cycle by EOR
-			else 
-            address_a_1 <= address_a_1+16'd64; // address for mid
-				 
-         
-			if (oob == 1 && address_a_1 < 16'd128) begin
-					sel = 2'b01;
-				 end
-			else if (oob == 1 && address_a_1 > 16'd65471) begin
-					sel = 2'b00; // dead cell outline at bottom
-			end
-			else begin 
-				   sel = 2'b01;
-			end
-
-			word_count <= word_count + 6'd1;
-			
-			if(word_count == 6'd63) begin// at end of row
-				   state <= EOR;
-			end
-			else
-				   state <= TOP;
-			end
-
-		EOR : begin
-				
-				if (address_a_1 > 16'd65407) // in the second-to-last row
-					oob <= 1;
-				
-				if (oob == 1 && address_a_1 < 16'd129)
-				  oob <= 0;
-				else if (oob == 1) begin
-					frame_complete <= 1;
-				end
-				// address_a_2 <= address_a_2 - 16'd1;
-				address_a_1 <= address_a_1 + 16'd64;
-				sel = 2'b00;  // when to deassert write enable so this isn't the next thing written?
-				shift_enable_b <= 1;
-				shift_enable_m <= 1;
-				shift_enable_t <= 1;
-				word_count <= 6'd0; 
-				state <= TOP;
-				end
-
-	  endcase
-	  
+	else if (!computation_en) begin
+		address_a_1 <= writedata[35:20];
+		wren_a_1 <= 1;
+		wren_a_2 <= 1;
 	end
+	else if (computation_en) begin  
+		if (frame_complete && ready_sig) begin
+		  address_a_1 <= 16'd0;
+		  address_a_2 <= 16'd0;
+		  shift_enable_b <= 1'd0;
+		  shift_enable_m <= 1'd0;
+		  shift_enable_t <= 1'd0;
+		  clear <= 1;
+		  word_count <= 6'd0;
+		  state <= TOP;
+		  oob <= 1;
+		  wren_a_1 <= 0;
+		  wren_a_2 <= 0;
+		  frame_complete <= 0;
+		  if (direction == 0)
+			direction <= 1;
+		  else
+			direction <= 0;
+		  end
+		  
+		else if (frame_complete && ~ready_sig) begin end
+		  
+		else if (direction == 0) begin
+		clear <= 0;
+		  case (state)
+			 TOP : begin
+					 if (address_a_1 < 16'd64 && oob == 1) 
+						sel = 2'b00; // dead cell buffer at top 
+					 else begin
+					  sel = 2'b01;	 
+						//address_a_1 <= address_a_1 + 16'd64; //address for MID
+					 end
+					 //if (address_a_1 > 16'd65407) // in the second-to-last row
+					 //oob <= 1;
+					// memory address computation
+					 if (oob == 1 && address_a_1 > 16'd65471)
+						address_a_1 <= address_a_1; // Doesn't matter, won't be checked. do not overflow the variable.  
+					 else 
+						address_a_1 <= address_a_1 + 16'd64; //address for BOT
+					
+					 if (word_count == 6'd0 && oob == 1)
+						wren_a_2 <= 0; // if looking at first word, EOR zeros still in accelerator, invalid output. 
+					 /*
+					 else if (word_count  == the region where the output is just from the dead cells)
+						wren_a_2 <= 0;
+					 */
+					 else wren_a_2 <= 1;
+					 if (address_a_1 > 1)
+						address_a_2 <= address_a_1 - 16'd2;  // will write to the MID address in t+1 grid
+					 
+					 shift_enable_m <= 0;
+					 shift_enable_b <= 0;
+					 shift_enable_t <= 1;
+					 state <= MID;
+					 end
 
-	else if (direction == 1) begin
+			 MID : begin
+					 sel = 2'b01; 
+					 shift_enable_t <= 0;
+					 shift_enable_m <= 1;
+
+				// Compute address for TOP  
+				//if (oob == 1 && address_a_1 < 16'd128)
+				if (oob == 1)
+						address_a_1 = address_a_1 - 16'd64 + 16'd1; // address for TOP; go back one row, move forward one word 
+				else begin 
+						address_a_1 <= address_a_1 - 16'd128 + 16'd1; // address for TOP; go back two rows, move forward one word 
+				end
+				
+				state <= BOT;
+				if (wren_a_2 == 1)
+					wren_a_2 <= 0;	 
+				end
+
+			 BOT : begin
+					 shift_enable_m <= 0;
+					 shift_enable_b <= 1;
+
+				
+				// compute address for mid
+				// if we
+				if ((oob == 1 && address_a_1 < 16'd64))
+					address_a_1 <= address_a_1; // address for mid
+				else if ((oob == 1) && (address_a_1 < 16'd65))
+					address_a_1 <= 0;
+				else if (word_count == 6'd63)
+					address_a_1 <= address_a_1; // address for top to account for extra cycle by EOR
+				else 
+					address_a_1 <= address_a_1+16'd64; // address for mid
+					 
+				
+				if (oob == 1 && address_a_1 < 16'd128) begin
+						sel = 2'b01;
+					 end
+				else if (oob == 1 && address_a_1 > 16'd65471) begin
+						sel = 2'b00; // dead cell outline at bottom
+				end
+				else begin 
+						sel = 2'b01;
+				end
+
+				word_count <= word_count + 6'd1;
+				
+				if(word_count == 6'd63) begin// at end of row
+						state <= EOR;
+				end
+				else
+						state <= TOP;
+				end
+
+			EOR : begin
+					
+					if (address_a_1 > 16'd65407) // in the second-to-last row
+						oob <= 1;
+					
+					if (oob == 1 && address_a_1 < 16'd129)
+					  oob <= 0;
+					else if (oob == 1) begin
+						frame_complete <= 1;
+					end
+					// address_a_2 <= address_a_2 - 16'd1;
+					address_a_1 <= address_a_1 + 16'd64;
+					sel = 2'b00;  // when to deassert write enable so this isn't the next thing written?
+					shift_enable_b <= 1;
+					shift_enable_m <= 1;
+					shift_enable_t <= 1;
+					word_count <= 6'd0; 
+					state <= TOP;
+					end
+
+		  endcase
+		  
+		end
+
+		else if (direction == 1) begin
 	clear <= 0;
 	  case (state)
 		 TOP : begin
@@ -382,6 +407,8 @@ always_ff @(posedge clk or posedge reset) begin
 	  
 	end
 	
+	
+end
 	
 end
 

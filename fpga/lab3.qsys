@@ -69,7 +69,7 @@
       }
       datum sopceditor_expanded
       {
-         value = "1";
+         value = "0";
          type = "boolean";
       }
    }
@@ -577,7 +577,7 @@
   <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone V" />
   <parameter name="AUTO_DEVICE" value="5CSXFC6D6F31C8ES" />
  </module>
- <module kind="vga_led" version="1.2" enabled="1" name="vga_led_0">
+ <module kind="vga_led" version="1.3" enabled="1" name="vga_led_0">
   <parameter name="AUTO_CLOCK_CLOCK_RATE" value="108000000" />
   <parameter name="AUTO_CLOCK50_CLOCK_RATE" value="108000000" />
  </module>
@@ -786,7 +786,7 @@
   <parameter name="gui_pll_cascading_mode">Create an adjpllin signal to connect with an upstream PLL</parameter>
   <parameter name="AUTO_REFCLK_CLOCK_RATE" value="50000000" />
  </module>
- <module kind="conway_accel" version="1.3" enabled="1" name="conway_accel_0">
+ <module kind="conway_accel" version="1.4" enabled="1" name="conway_accel_0">
   <parameter name="AUTO_CLOCK_CLOCK_RATE" value="108000000" />
  </module>
  <module kind="clock_source" version="13.1" enabled="1" name="clk_0">
@@ -800,24 +800,6 @@
    version="13.1"
    start="pll_0.outclk0"
    end="vga_led_0.clock" />
- <connection
-   kind="avalon"
-   version="13.1"
-   start="master_0.master"
-   end="vga_led_0.avalon_slave_0">
-  <parameter name="arbitrationPriority" value="1" />
-  <parameter name="baseAddress" value="0x0000" />
-  <parameter name="defaultConnection" value="false" />
- </connection>
- <connection
-   kind="avalon"
-   version="13.1"
-   start="hps_0.h2f_lw_axi_master"
-   end="vga_led_0.avalon_slave_0">
-  <parameter name="arbitrationPriority" value="1" />
-  <parameter name="baseAddress" value="0x0000" />
-  <parameter name="defaultConnection" value="false" />
- </connection>
  <connection
    kind="avalon"
    version="13.1"
@@ -880,6 +862,24 @@
    version="13.1"
    start="pll_0.outclk0"
    end="vga_led_0.clock50" />
+ <connection
+   kind="avalon"
+   version="13.1"
+   start="master_0.master"
+   end="conway_accel_0.avalon_slave_0">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
+ <connection
+   kind="avalon"
+   version="13.1"
+   start="hps_0.h2f_axi_master"
+   end="conway_accel_0.avalon_slave_0">
+  <parameter name="arbitrationPriority" value="1" />
+  <parameter name="baseAddress" value="0x0000" />
+  <parameter name="defaultConnection" value="false" />
+ </connection>
  <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
  <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />
  <interconnectRequirement for="$system" name="qsys_mm.insertDefaultSlave" value="false" />
