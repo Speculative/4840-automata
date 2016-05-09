@@ -116,8 +116,7 @@ end
 enum logic [1:0] {TOP, MID, BOT, EOR} state;
 logic [0:0] frame_complete;
 reg [5:0] word_count;
-// parameter TOP = 2'd0, MID=2'd1, BOT=2'd2, EOR=2'd3;
-
+logic [2:0] eorstall;
 
 always_ff @(posedge clk or posedge reset) begin
 
@@ -135,6 +134,7 @@ always_ff @(posedge clk or posedge reset) begin
 	  wren_a_2 <= 0;
 	  frame_complete <= 0;
 	  direction <= 0;
+	  eorstall <= 3'd0;
 	  end
 	  
 	else if (frame_complete && ready_sig) begin
@@ -247,25 +247,44 @@ always_ff @(posedge clk or posedge reset) begin
 			end
 
 		EOR : begin
-				
-				if (address_a_1 > 16'd65407) // in the second-to-last row
-					oob <= 1;
-				
-				if (oob == 1 && address_a_1 < 16'd129)
-				  oob <= 0;
-				else if (oob == 1) begin
-					frame_complete <= 1;
-				end
-				// address_a_2 <= address_a_2 - 16'd1;
-				address_a_1 <= address_a_1 + 16'd64;
-				sel = 2'b00;  // when to deassert write enable so this isn't the next thing written?
-				shift_enable_b <= 1;
-				shift_enable_m <= 1;
-				shift_enable_t <= 1;
-				word_count <= 6'd0; 
-				state <= TOP;
-				end
+				if (eorstall == 3'd3) begin
+					if (address_a_1 > 16'd65407) // in the second-to-last row
+						oob <= 1;
+					
+					if (oob == 1 && address_a_1 < 16'd129)
+					  oob <= 0;
+					else if (oob == 1) begin
+						frame_complete <= 1;
+					end
+					// address_a_2 <= address_a_2 - 16'd1;
+					address_a_1 <= address_a_1 + 16'd64;
+					word_count <= 6'd0; 						
+					wren_a_2 <= 0;
+					state <= TOP;
+					eorstall <= 0;
 
+				end
+				else begin
+					eorstall <= eorstall+1;
+					state <= EOR;
+					if (eorstall == 3'd0) begin
+						shift_enable_b <= 0;
+						address_a_2 <= address_a_2 + 16'd1;
+						wren_a_2 <= 1;
+					end
+					else if (eorstall == 3'd1) begin
+						sel = 2'b00;  // when to deassert write enable so this isn't the next thing written?
+						shift_enable_b <= 1;
+						shift_enable_m <= 1;
+						shift_enable_t <= 1;
+						wren_a_2 <= 0;
+					end
+					else if (eorstall == 3'd2) begin
+						address_a_2 <= address_a_2 + 16'd1;
+						wren_a_2 <= 1;
+					end
+				end
+			end
 	  endcase
 	  
 	end
@@ -359,32 +378,48 @@ always_ff @(posedge clk or posedge reset) begin
 			end
 
 		EOR : begin
-				
-				if (address_a_2 > 16'd65407) // in the second-to-last row
-					oob <= 1;
-				
-				if (oob == 1 && address_a_2 < 16'd129)
-				  oob <= 0;
-				else if (oob == 1) begin
-					frame_complete <= 1;
+				if (eorstall == 3'd3) begin
+					if (address_a_2 > 16'd65407) // in the second-to-last row
+						oob <= 1;
+					
+					if (oob == 1 && address_a_2 < 16'd129)
+					  oob <= 0;
+					else if (oob == 1) begin
+						frame_complete <= 1;
+					end
+					// address_a_2 <= address_a_2 - 16'd1;
+					address_a_2 <= address_a_2 + 16'd64;
+					word_count <= 6'd0; 						
+					wren_a_1 <= 0;
+					state <= TOP;
+					eorstall <= 0;
 				end
-				// address_a_2 <= address_a_2 - 16'd1;
-				address_a_2 <= address_a_2 + 16'd64;
-				sel = 2'b00;  // when to deassert write enable so this isn't the next thing written?
-				shift_enable_b <= 1;
-				shift_enable_m <= 1;
-				shift_enable_t <= 1;
-				word_count <= 6'd0; 
-				state <= TOP;
+				else begin
+					eorstall <= eorstall+1;
+					state <= EOR;
+					if (eorstall == 3'd0) begin
+						shift_enable_b <= 0;
+						address_a_1 <= address_a_1 + 16'd1;
+						wren_a_1 <= 1;
+					end
+					else if (eorstall == 3'd1) begin
+						sel = 2'b00;  // when to deassert write enable so this isn't the next thing written?
+						shift_enable_b <= 1;
+						shift_enable_m <= 1;
+						shift_enable_t <= 1;
+						wren_a_1 <= 0;
+					end
+					else if (eorstall == 3'd2) begin
+						address_a_1 <= address_a_1 + 16'd1;
+						wren_a_1 <= 1;
+					end
 				end
+			end
 			   
 	  endcase
 	  
 	end
 	
-	
 end
-
-
   
 endmodule
