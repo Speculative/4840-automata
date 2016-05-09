@@ -178,10 +178,10 @@ always_ff @(posedge clk or posedge reset) begin
 				
 				 if (word_count == 6'd0 && oob == 1)
                wren_a_2 <= 0; // if looking at first word, EOR zeros still in accelerator, invalid output. 
-				 /*
-				 else if (word_count  == the region where the output is just from the dead cells)
+				 
+				 else if (word_count  < 6'd2)
 					wren_a_2 <= 0;
-				 */
+				 
 				 else wren_a_2 <= 1;
 				 if (address_a_1 > 1)
 				   address_a_2 <= address_a_1 - 16'd2;  // will write to the MID address in t+1 grid
@@ -309,10 +309,10 @@ always_ff @(posedge clk or posedge reset) begin
 				
 				 if (word_count == 6'd0 && oob == 1)
                wren_a_1 <= 0; // if looking at first word, EOR zeros still in accelerator, invalid output. 
-				 /*
-				 else if (word_count  == the region where the output is just from the dead cells)
-					wren_a_2 <= 0;
-				 */
+				 
+				 else if (word_count  < 6'd2)
+					wren_a_1 <= 0;
+				 
 				 else wren_a_1 <= 1;
 				 if (address_a_2 > 1)
 				   address_a_1 <= address_a_2 - 16'd2;  // will write to the MID address in t+1 grid
