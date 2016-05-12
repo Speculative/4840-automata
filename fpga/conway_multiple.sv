@@ -1,6 +1,4 @@
 parameter word_len = 20;
-//parameter in_top = 21;
-//parameter out_top = 19;
 
 module Conway_Multiple( 
   input wire [21:0] top_row, middle_row, bottom_row, // 22 columns in
@@ -9,7 +7,8 @@ module Conway_Multiple(
 );
 
 
-
+// Generate and wire together 20
+// Conway single modules. 
 	generate
 		genvar i;
 		

@@ -1,14 +1,12 @@
 // Management surrounding the Conway accelerator including buffers
 module Conway_Accel(
- // need end-of-screen logic from the VGA controller
- 
  input clk, reset,
  // VGA controller will access memory exclusively on B ports, through this module.
  input ready_sig,
  input  [15:0] address_b, 
  output [19:0] q_b,
  output wait_request,
- output logic halp
+ output logic halp //testing...
 
 );
 
@@ -37,20 +35,8 @@ module Conway_Accel(
 					.wren_b(wren_b),
 					.clock_a(clk), .clock_b(clk)
 					);
-	/*
-	input	[15:0]  address_a;
-	input	[15:0]  address_b;
-	input	  clock_a;
-	input	  clock_b;
-	input	[19:0]  data_a;
-	input	[19:0]  data_b;
-	input	  wren_a;
-	input	  wren_b;
-	output	[19:0]  q_a;
-	output	[19:0]  q_b;
-   */
 
-  tmemory m2 (  
+tmemory m2 (  
 					.address_a(address_a_2),
 					.address_b(address_b),
 					.data_a(result),
@@ -67,8 +53,8 @@ module Conway_Accel(
   logic [1:0] sel;
   assign halp = q_b_2[0];
   
+  // mux chooses zeros or which memory to shift in
   mux20 memmux (.din_0(zeros), .din_1(q_a_1), .din_2(q_a_2), .sel(sel), .dout(dout));
-  // TODO: this needs to be somewhere in an alwaysff or else it won't change					
   logic direction; //when 0, m1 is t, when 1, m2 is t
 
 
@@ -95,14 +81,7 @@ module Conway_Accel(
 // deal with requests from the VGA controller
 
 assign q_b = (direction) ? q_b_2:q_b_1;
-/*always_comb begin
-if (direction == 0)
-	q_b = q_b_1;
-else if (direction == 1)
-	q_b = q_b_2;
-end
-  */
-  
+ 
 // instatiate conway module, wire together.
 
 
@@ -166,10 +145,7 @@ always_ff @(posedge clk or posedge reset) begin
 					sel = 2'b00; // dead cell buffer at top 
 				 else begin
 			     sel = 2'b01;	 
-				   //address_a_1 <= address_a_1 + 16'd64; //address for MID
 				 end
-				 //if (address_a_1 > 16'd65407) // in the second-to-last row
-				 //oob <= 1;
 				// memory address computation
 			 	 if (oob == 1 && address_a_1 > 16'd65471)
 					address_a_1 <= address_a_1; // Doesn't matter, won't be checked. do not overflow the variable.  
@@ -198,7 +174,6 @@ always_ff @(posedge clk or posedge reset) begin
 				 shift_enable_m <= 1;
 
          // Compute address for TOP  
-         //if (oob == 1 && address_a_1 < 16'd128)
 			if (oob == 1)
 					address_a_1 = address_a_1 - 16'd64 + 16'd1; // address for TOP; go back one row, move forward one word 
 			else begin 
@@ -213,10 +188,8 @@ always_ff @(posedge clk or posedge reset) begin
 		 BOT : begin
 				 shift_enable_m <= 0;
 				 shift_enable_b <= 1;
-
 			
          // compute address for mid
-			// if we
          if ((oob == 1 && address_a_1 < 16'd64))
             address_a_1 <= address_a_1; // address for mid
 			else if ((oob == 1) && (address_a_1 < 16'd65))
@@ -256,7 +229,6 @@ always_ff @(posedge clk or posedge reset) begin
 					else if (oob == 1) begin
 						frame_complete <= 1;
 					end
-					// address_a_2 <= address_a_2 - 16'd1;
 					address_a_1 <= address_a_1 + 16'd64;
 					word_count <= 6'd0; 						
 					wren_a_2 <= 0;
@@ -297,10 +269,7 @@ always_ff @(posedge clk or posedge reset) begin
 					sel = 2'b00; // dead cell buffer at top 
 				 else begin
 			     sel = 2'b10;	 
-				   //address_a_1 <= address_a_1 + 16'd64; //address for MID
 				 end
-				 //if (address_a_1 > 16'd65407) // in the second-to-last row
-				 //oob <= 1;
 				// memory address computation
 			 	 if (oob == 1 && address_a_2 > 16'd65471)
 					address_a_2 <= address_a_2; // Doesn't matter, won't be checked. do not overflow the variable.  
@@ -329,7 +298,6 @@ always_ff @(posedge clk or posedge reset) begin
 				 shift_enable_m <= 1;
 
          // Compute address for TOP  
-         //if (oob == 1 && address_a_1 < 16'd128)
 			if (oob == 1)
 					address_a_2 = address_a_2 - 16'd64 + 16'd1; // address for TOP; go back one row, move forward one word 
 			else begin 
@@ -347,7 +315,6 @@ always_ff @(posedge clk or posedge reset) begin
 
 			
          // compute address for mid
-			// if we
          if ((oob == 1 && address_a_2 < 16'd64))
             address_a_2 <= address_a_2; // address for mid
 			else if ((oob == 1) && (address_a_2 < 16'd65))
@@ -387,7 +354,6 @@ always_ff @(posedge clk or posedge reset) begin
 					else if (oob == 1) begin
 						frame_complete <= 1;
 					end
-					// address_a_2 <= address_a_2 - 16'd1;
 					address_a_2 <= address_a_2 + 16'd64;
 					word_count <= 6'd0; 						
 					wren_a_1 <= 0;
@@ -417,9 +383,7 @@ always_ff @(posedge clk or posedge reset) begin
 			end
 			   
 	  endcase
-	  
 	end
-	
 end
   
 endmodule

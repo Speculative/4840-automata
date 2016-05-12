@@ -1,4 +1,13 @@
+'''
+ Script that searches for and displays already-generated
+ .sof files. User then selects which file to load and 
+ the quartus programmer is called. 
+
+ Should be placed in project folder and Quartus told to compile 
+ to ./output_files
+'''
 #!/usr/bin/env python
+
 import os
 
 def main():
@@ -16,7 +25,7 @@ def main():
   fname = sof_files[choice]
   callname = "quartus_pgm --mode=JTAG -o \'P;./output_files/%s\'"%fname
   
-  print callname
+  # print callname
   stream = os.popen(callname)
   stream.close()
 

@@ -1,3 +1,9 @@
+/*
+ * Basic 20-bit wide mux 
+ * with 3 inputs. 
+ */
+
+
 module mux20 (
 input wire [19:0] din_0,
 input wire [19:0] din_1,

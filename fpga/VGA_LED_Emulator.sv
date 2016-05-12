@@ -4,6 +4,13 @@
  * Stephen A. Edwards, Columbia University
  */
 
+/*
+ * Adapted for use with Conway Accelerator.
+ * Able to draw a 1280x1024 screen. Computes
+ * pixel color based on alive or dead cells
+ * received from the Conway module. 
+ */
+
 module VGA_LED_Emulator(
  input logic 	    clk108, reset,
  input logic [19:0] q_b,
@@ -14,7 +21,7 @@ module VGA_LED_Emulator(
  output logic 	    VGA_CLK, VGA_HS, VGA_VS, VGA_BLANK_n, VGA_SYNC_n);
 
 /*
- * 640 X 480 VGA timing for a 50 MHz clock: one pixel every other cycle
+ * 1280 x 1024 VGA timing for a 108 MHz clock: one pixel every other cycle
  * 
  * HCOUNT 1599 0             1279       1599 0
  *             _______________              ________
@@ -25,6 +32,10 @@ module VGA_LED_Emulator(
  *       _______________________      _____________
  * |____|       VGA_HS          |____|
  */
+ 
+ // values determined with help from:
+ // https://eewiki.net/pages/viewpage.action?pageId=15925278
+   
    // Parameters for hcount
    parameter HACTIVE      = 11'd 1280,
              HFRONT_PORCH = 11'd 48,
@@ -74,7 +85,6 @@ module VGA_LED_Emulator(
 			VGA_HS <= 0;
 		
 		
-		//assign VGA_HS = !( (hcount[10:8] == 3'b101) & !(hcount[7:5] == 3'b111));
 		
 		if (vcount >= 11'b10000000001 && vcount <= 11'b10000000100)
 			VGA_VS <= 1;
@@ -90,7 +100,6 @@ module VGA_LED_Emulator(
 		 
 	end 
 
-	//assign VGA_VS = !( vcount[10:2] == (VACTIVE + VFRONT_PORCH) / 2);
 
    assign VGA_SYNC_n = 0; // For adding sync to video signals; not used for VGA
    
@@ -99,29 +108,13 @@ module VGA_LED_Emulator(
    // 110 0011 1111  1599	       10 0000 1100  524
 	
 
-	/*
-   assign VGA_BLANK_n = !( hcount[10] & (hcount[9] | hcount[8]) ) &
-			!( vcount[9] | (vcount[8:5] == 4'b1111) );   
-	*/
-	
    /* VGA_CLK is 108 MHz
     *             __    __    __
     * clk108    __|  |__|  |__|
     *        
     */
    assign VGA_CLK = clk108; // 108 MHz clock: pixel latched on rising edge
-	
-	/*
-	assign inBall = ((hcount[10:1] - 500)*(hcount[10:1] - 500) + (vcount[9:0] - 500)*(vcount[9:0] - 500)) < 64;
-	
-   always_comb begin
-      {VGA_R, VGA_G, VGA_B} = {8'h00, 8'hbf, 8'hff}; // Blue
-      if (inBall)
-			{VGA_R, VGA_G, VGA_B} = {8'hff, 8'hff, 8'h00}; // Yellow			
-   end  
-*/
-	
-	
+
 	logic [39:0] buffer;
 	enum logic [1:0] {START, LT, RT} state;
 	logic [5:0] pixel_count;
@@ -137,19 +130,21 @@ module VGA_LED_Emulator(
 			buffer <= 40'd0;
 			ready_sig <= 1'd0;
 		end
-		else if(address == 16'd65535 && pixel_count == 6'd18) begin
+		// Just drew the last pixel
+    else if(address == 16'd65535 && pixel_count == 6'd18) begin
 			address <= 16'd0;
 			pixel_count <= pixel_count + 6'd1;
 			ready_sig <= 1;
-		end			
+		end
+    // In any other pixel on screen
 		else if (hcount < 11'd1280 && vcount< 11'd1024) begin
 			case(state)
-				START : begin 
-					buffer[19:0] <= q_b;
+				START : begin // Extra set up after a reset
+					buffer[19:0] <= q_b; // first word into register
 					address <= address + 16'd1;
 					state <= RT;
 				end
-				LT : begin // drawing left, writing right 
+				LT : begin // drawing left(39:20), writing right 
 					if(pixel_count == 6'd18) begin
 						buffer[19:0] <= q_b;
 						address <= address + 16'd1;
@@ -158,7 +153,7 @@ module VGA_LED_Emulator(
 					if (pixel_count == 6'd19)
 						state <= RT;
 				end
-				RT: begin // drawing right, writing left
+				RT: begin // drawing right(19:0), writing left
 					if (pixel_count == 6'd18) begin
 						buffer[39:20] <= q_b;
 						address <= address + 16'd1;
@@ -168,7 +163,7 @@ module VGA_LED_Emulator(
 				end
 			endcase
 			if (pixel_count == 6'd19)
-				pixel_count <= 6'd0;
+				pixel_count <= 6'd0; // reset at end of word
 			else
 				pixel_count <= pixel_count + 6'd1;	
 				

@@ -1,5 +1,12 @@
-// Shift register adapted from (in project notes doc)
-// 41 bits of output
+/*
+ * Shift register that holds 41 bits.
+ * 22 of those are availble on the output.
+ * A shift moves in 20 bits of data.
+ * Available with a synchronous clear.
+ *
+ * Built with guidance from:
+ * https://courses.cs.washington.edu/courses/cse467/05wi/pdfs/lectures/07-SequentialVerilog.pdf
+ */
 
 module shift_buffer(input logic clk, clear,
 input logic shift_enable, // do shift when enabled, else hold
